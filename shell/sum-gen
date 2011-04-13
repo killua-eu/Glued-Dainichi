@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+# relpath=${1} - path relative to basepath
+# basepath=${basepath} - path to the base directory where data files are stored
+
+# save state && change to base-path
+oldpath=`pwd`
+basepath="${2}"
+[[ "${basepath}" = "" ]] && basepath="."
+cd "${basepath}"
+
+# make checksums, split $relpath into $reldir/$relfile
+sz=`cksum "${1}"`
+md=`md5sum "${1}"`
+sh=`sha512sum "${1}"`
+sm="${sz} ${md} ${sh}"
+reldir="${1%/*}"
+relfile="${1##*/}"
+[[ "${reldir}" == "${relfile}" ]] && reldir=""
+
+# make $basepath/.checksums/${reldir} if it doesnt exist
+[[ ! -d "${basepath}/.checksums/${reldir}" ]] && mkdir "${basepath}/.checksums/${reldir}"
+
+# test if md5($basepath/.checksums/${reldir}/$relfile.sum) = md5($sm)
+# and exit with [PASS] or [FAIL]
+[[ -f "${basepath}/.checksums/${1}.sum" ]] && smold=`cat "${basepath}/.checksums/${1}.sum"` && [[ `echo ${sm} | md5sum` != `echo ${smold} | md5sum` ]]  && echo -e "\e[1;31m* [FAIL] \e[0;37m ${1}" && exit
+[[ `echo ${sm} | md5sum` = `echo ${smold} | md5sum` ]] && echo -e "\e[1;32m* [PASS] \e[0;37m ${1}" && exit
+
+# prepare string and write it to the checksums file. exit with [INIT]
+sm="${sz}\n${md}\n${sh}"
+echo -e ${sm} > "${basepath}/.checksums/${1}.sum"
+echo -e "\e[1;33m* [INIT] \e[0;37m ${1}"
+
+# restore state
+cd "${oldpath}"

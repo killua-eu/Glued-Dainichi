@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+# save state
+olddir=`pwd`
+
+# set path
+path="${1}"
+[[ "${path:0:1}" != "/" ]] && path="${olddir}/${1}" # if $path is not absolute, make it absolute
+
+# set basebath
+basepath="${2}"
+if [ "$basepath" = "" ] ; then
+  basepath="$path"
+else
+  [[ "${basepath:0:1}" != "/" ]] && basepath="${olddir}/${2}"
+fi ;
+
+# do the magic
+cd "${path}"
+
+echo -e "\e[1;34m********  CWD $path \e[0;37m"
+for filename in *
+do
+  if [ -f "${filename}" ] ; then
+    ext=`echo "${filename}" | rev | cut -b 1-3 | rev`
+    [[ $ext != "sum" ]] &&  "$olddir"/sum-gen "${filename}"
+  fi ;
+  if [ -d "${filename}" ] && [ "${filename}" != ".checksums" ] ; then
+    cd "${olddir}"
+    ${olddir}/sum-batch "${path}/${filename}" "${basepath}"
+    cd "$path"
+  fi ;
+done;
+
+
+datafiles=""
+csumfiles=""
+
+for filename in *
+do
+  if [ -f "${filename}" ] ; then
+    datafiles="${datafiles}\n${filename}"
+  fi ;
+done;
+
+cd .checksums
+
+for filename in *
+do
+  if [ -f "${filename}" ] ; then
+    csumfiles="${csumfiles}\n${filename%\.sum}"
+  fi ;
+done;
+
+
+diffout=`colordiff -q <(echo -e "$datafiles" ) <(echo -e "$csumfiles")`
+[[ "${diffout}" != "" ]] && echo -e "\e[1;31m* [FAIL] \e[0;37m Hashdir-Filedir difference in ${path}" && echo "" && datafiles="Filedir${datafiles}" && csumfiles="Hashdir${csumfiles}" && colordiff -y <(echo -e "$datafiles" ) <(echo -e "$csumfiles")
+
+
+
+# restore state
+echo -e "\e[1;30m<<<<<<<<  DONE $path \e[0;37m"
+cd "$olddir"
+

@@ -1,0 +1,8 @@
+################################################################################
+### Glued-Dainichi #############################################################
+################################################################################
+
+A module for the Glued platform managing collections of information.
+http://glued.vaizard.org/en/
+
+/shell - set of shell scripts to provide checksumming of data outside of Dainichi
